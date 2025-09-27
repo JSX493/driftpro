@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DriftPro Remastered</title>
+  <style>
+    :root {
+      --bg: #e8f6ff;
+      --panel: #ffffffcc;
+      --accent: #ff3b3b;
+      --dark: #122;
+      --shadow: rgba(0,0,0,0.08);
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: linear-gradient(#87ceeb 0%, #bfe9ff 60%);
+      color: var(--dark);
+      overflow: hidden;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--panel);
+      box-shadow: 0 2px 10px var(--shadow);
+      position: relative;
+      z-index: 10;
+    }
+    header h1 { margin: 0; font-size: 18px; }
+    #app {
+      height: calc(100% - 56px);
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+    nav {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 6px 18px var(--shadow);
+    }
+    main {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .panel {
+      background: var(--panel);
+      padding: 18px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    button {
+      background: var(--accent);
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    button:hover { background: #e02b2b; }
+    a.link { color: var(--accent); cursor: pointer; text-decoration: none; }
+    a.link:hover { text-decoration: underline; }
+    .view { display: none; height: 100%; }
+    .view.active { display: block; }
+
+    /* --- Auth Views --- */
+    .auth-container {
+      max-width: 320px;
+      margin: 40px auto;
+      text-align: center;
+    }
+    .input {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.1);
+      box-sizing: border-box;
+    }
+    .auth-switch { margin-top: 15px; font-size: 14px; }
+
+    /* --- HUD --- */
+    #hud {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      background: rgba(0,0,0,0.6);
+      padding: 12px;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 16px;
+      text-shadow: 1px 1px 2px #000;
+    }
+    #gameCanvas { width: 100%; height: 100%; display: block; }
+    footer {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 12px;
+      background: rgba(255,255,255,0.7);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DriftPro Remastered</h1>
+    <div id="userArea"></div>
+  </header>
+  <div id="app">
+    <nav>
+      <div id="nav-menu" style="display:none;">
+        <div class="panel">
+          <strong>Menu</strong>
+          <div style="margin-top:10px; display:flex; flex-direction:column; gap: 8px;">
+            <a class="link" data-route="#dashboard">Dashboard</a>
+            <a class="link" data-route="#game">Jogar</a>
+            <a class="link" data-route="#garage">Garagem</a>
+            <a class="link" data-route="#settings">Configurações</a>
+            <button id="btnLogout" style="margin-top:8px;">Sair</button>
+          </div>
+        </div>
+        <div class="panel">
+          <strong>Controles</strong>
+          <div style="margin-top:8px; font-size: 14px;">W/S: Acelerar/Frear • A/D: Virar • Espaço: Freio de Mão • Shift: Nitro</div>
+        </div>
+      </div>
+       <div id="nav-auth" class="panel">
+          <strong>Bem-vindo!</strong>
+          <p style="font-size: 14px;">Faça login ou crie uma conta para começar a pilotar.</p>
+      </div>
+    </nav>
+    <main>
+      <section id="login" class="view">
+        <div class="auth-container panel">
+          <h2>Entrar</h2>
+          <input id="loginUser" class="input" placeholder="Nome de usuário" />
+          <input id="loginPass" class="input" type="password" placeholder="Senha" />
+          <button id="btnLogin">Login</button>
+          <div class="auth-switch">Não tem uma conta? <a class="link" data-route="#signup">Crie uma aqui</a>.</div>
+        </div>
+      </section>
+
+      <section id="signup" class="view">
+        <div class="auth-container panel">
+            <h2>Criar Conta</h2>
+            <input id="signupUser" class="input" placeholder="Nome de usuário" />
+            <input id="signupPass" class="input" type="password" placeholder="Senha" />
+            <input id="signupPassConfirm" class="input" type="password" placeholder="Confirme a Senha" />
+            <button id="btnSignup">Criar Conta</button>
+            <div class="auth-switch">Já tem uma conta? <a class="link" data-route="#login">Faça login</a>.</div>
+        </div>
+      </section>
+
+      <section id="dashboard" class="view">
+        <div class="panel" style="margin:18px">
+          <h2>Dashboard</h2>
+          <p>Bem-vindo(a) de volta! Veja o status do seu carro e prepare-se para a próxima corrida.</p>
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <div style="flex:1;padding:10px;background:#fff;border-radius:8px">Carro: <strong id="carName">DriftR-3000</strong></div>
+            <div style="flex:1;padding:10px;background:#fff;border-radius:8px">Nitro: <strong id="nitroLevel">100%</strong></div>
+            <div style="flex:1;padding:10px;background:#fff;border-radius:8px">Recorde de Drift: <strong id="highScore">0</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="garage" class="view">
+        <div class="panel" style="margin:18px">
+          <h2>Garagem</h2>
+          <p>Escolha uma nova pintura para o seu carro:</p>
+          <div style="display:flex;gap:8px;margin-top:10px; flex-wrap: wrap;">
+            <button class="skin" data-color="#ff3b3b">Vermelho Fúria</button>
+            <button class="skin" data-color="#2f9f46">Verde Viper</button>
+            <button class="skin" data-color="#2b6cff">Azul Cobalto</button>
+            <button class="skin" data-color="#ff9500">Laranja Solar</button>
+            <button class="skin" data-color="#af52de">Roxo Neon</button>
+            <button class="skin" data-color="#222">Preto Fosco</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="settings" class="view">
+        <div class="panel" style="margin:18px">
+          <h2>Configurações</h2>
+          <p>Qualidade Gráfica: <select id="quality"><option>Baixa</option><option selected>Média</option><option>Alta</option></select></p>
+          <p><em>(Recarregue a página do jogo para aplicar)</em></p>
+        </div>
+      </section>
+
+      <section id="game" class="view">
+        <div id="hud">
+            Velocidade: <span id="hudSpeed">0</span> km/h<br/>
+            Drift Score: <span id="hudDrift">0</span>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+      </section>
+    </main>
+  </div>
+  <footer>DriftPro Remastered</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <script>
+  
+  // =================================================================
+  // Application Manager (UI, Routing, Auth)
+  // =================================================================
+  const App = {
+    user: null,
+    
+    init() {
+      // Event Listeners
+      window.addEventListener('hashchange', () => this.handleRoute());
+      document.querySelectorAll('a.link').forEach(a => a.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.showRoute(a.dataset.route);
+      }));
+
+      // Auth Buttons
+      document.getElementById('btnLogin').addEventListener('click', () => this.login());
+      document.getElementById('btnSignup').addEventListener('click', () => this.signup());
+      document.getElementById('btnLogout').addEventListener('click', () => this.logout());
+
+      // Garage Buttons
+      document.querySelectorAll('.skin').forEach(b => b.addEventListener('click', () => {
+        const color = b.dataset.color;
+        this.user.carColor = color;
+        this.saveUserData();
+        Game.applyCarColor(color);
+      }));
+
+      this.checkLogin();
+      this.handleRoute();
+    },
+
+    handleRoute() {
+      const route = location.hash || (this.user ? '#dashboard' : '#login');
+      this.showRoute(route);
+    },
+
+    showRoute(route) {
+      if (!this.user && !['#login', '#signup'].includes(route)) {
+        location.hash = '#login';
+        return;
+      }
+
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      const view = document.querySelector(route);
+      if (view) {
+        view.classList.add('active');
+      } else {
+        document.querySelector(this.user ? '#dashboard' : '#login').classList.add('active');
+      }
+      
+      location.hash = route;
+      
+      if(route === '#game' && this.user) {
+        Game.start();
+      } else {
+        Game.stop();
+      }
+      this.updateUI();
+    },
+
+    updateUI() {
+      const userArea = document.getElementById('userArea');
+      const navMenu = document.getElementById('nav-menu');
+      const navAuth = document.getElementById('nav-auth');
+
+      if (this.user) {
+        userArea.innerHTML = `Olá, <strong>${this.user.username}</strong>`;
+        navMenu.style.display = 'block';
+        navAuth.style.display = 'none';
+        document.getElementById('highScore').innerText = this.user.highScore || 0;
+      } else {
+        userArea.innerHTML = '';
+        navMenu.style.display = 'none';
+        navAuth.style.display = 'block';
+      }
+    },
+
+    checkLogin() {
+      const userData = localStorage.getItem('driftpro_session');
+      if (userData) {
+        this.user = JSON.parse(userData);
+      }
+    },
+
+    saveUserData() {
+      // In a real app, this would be a server call. Here we update the master user list.
+      const users = JSON.parse(localStorage.getItem('driftpro_users') || '{}');
+      users[this.user.username] = this.user;
+      localStorage.setItem('driftpro_users', JSON.stringify(users));
+      localStorage.setItem('driftpro_session', JSON.stringify(this.user)); // Update session too
+    },
+    
+    login() {
+        const username = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value;
+        if (!username || !pass) {
+            alert('Por favor, preencha todos os campos.');
+            return;
+        }
+
+        const users = JSON.parse(localStorage.getItem('driftpro_users') || '{}');
+        if (users[username] && users[username].password === pass) {
+            this.user = users[username];
+            localStorage.setItem('driftpro_session', JSON.stringify(this.user));
+            this.showRoute('#dashboard');
+        } else {
+            alert('Nome de usuário ou senha incorretos.');
+        }
+    },
+
+    signup() {
+        const username = document.getElementById('signupUser').value.trim();
+        const pass = document.getElementById('signupPass').value;
+        const passConfirm = document.getElementById('signupPassConfirm').value;
+
+        if (!username || !pass || !passConfirm) {
+            alert('Por favor, preencha todos os campos.');
+            return;
+        }
+        if (pass !== passConfirm) {
+            alert('As senhas não coincidem.');
+            return;
+        }
+
+        const users = JSON.parse(localStorage.getItem('driftpro_users') || '{}');
+        if (users[username]) {
+            alert('Este nome de usuário já existe.');
+            return;
+        }
+
+        users[username] = {
+            username,
+            password: pass,
+            carColor: '#ff3b3b',
+            highScore: 0
+        };
+        localStorage.setItem('driftpro_users', JSON.stringify(users));
+        alert('Conta criada com sucesso! Faça o login para continuar.');
+        this.showRoute('#login');
+    },
+
+    logout() {
+      this.user = null;
+      localStorage.removeItem('driftpro_session');
+      this.showRoute('#login');
+    }
+  };
+
+
+  // =================================================================
+  // Game Engine (Three.js, Physics, Rendering)
+  // =================================================================
+  const Game = {
+    started: false,
+    renderer: null, scene: null, camera: null, car: null,
+    physicsState: { pos: new THREE.Vector3(), vel: new THREE.Vector3(), angle: 0, angularVel: 0 },
+    inputState: { acc: 0, steer: 0, handbrake: false, nitro: false },
+    animationFrameId: null,
+    driftScore: 0,
+
+    start() {
+        if (this.started) return;
+        this.started = true;
+        this.initEngine();
+        this.runLoop();
+    },
+
+    stop() {
+        if (!this.started) return;
+        this.started = false;
+        cancelAnimationFrame(this.animationFrameId);
+        // Optional: Clean up resources if needed
+    },
+    
+    initEngine() {
+      const canvas = document.getElementById('gameCanvas');
+      this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+      this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      this.scene = new THREE.Scene();
+      this.scene.background = new THREE.Color(0x87ceeb);
+      this.scene.fog = new THREE.Fog(0x87ceeb, 200, 800);
+
+      // --- Lighting ---
+      const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+      sun.position.set(120, 200, 80);
+      sun.castShadow = true;
+      sun.shadow.mapSize.width = 2048; // Higher res shadows
+      sun.shadow.mapSize.height = 2048;
+      sun.shadow.camera.near = 1; sun.shadow.camera.far = 500;
+      sun.shadow.camera.left = -200; sun.shadow.camera.right = 200;
+      sun.shadow.camera.top = 200; sun.shadow.camera.bottom = -200;
+      this.scene.add(sun);
+      const ambient = new THREE.HemisphereLight(0xffffee, 0x444455, 0.8);
+      this.scene.add(ambient);
+
+      // --- Scenery ---
+      const ground = new THREE.Mesh(
+          new THREE.PlaneGeometry(2000, 2000),
+          new THREE.MeshStandardMaterial({ color: 0x7aa56a, roughness: 1 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      this.scene.add(ground);
+
+      const track = new THREE.Mesh(
+          new THREE.PlaneGeometry(900, 600),
+          new THREE.MeshStandardMaterial({ color: 0x404040, metalness: 0.1, roughness: 0.8 })
+      );
+      track.rotation.x = -Math.PI / 2;
+      track.receiveShadow = true;
+      // *** CORREÇÃO: Eleva a pista para evitar Z-fighting ***
+      track.position.y = 0.01;
+      this.scene.add(track);
+
+      // Simple scenery
+      const treeMat = new THREE.MeshStandardMaterial({ color: 0x3d9947 });
+      for(let i=0; i<30; i++){
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 20, 8), new THREE.MeshStandardMaterial({color: 0x5C3A21}));
+          const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(15), treeMat);
+          leaves.position.y = 15;
+          const tree = new THREE.Group();
+          tree.add(trunk, leaves);
+          tree.position.set( (Math.random()-0.5) * 1800, 10, (Math.random()-0.5) * 1200);
+          if(Math.abs(tree.position.x)<500 && Math.abs(tree.position.z)<350) continue; // Avoid track
+          tree.castShadow = true;
+          this.scene.add(tree);
+      }
+      
+      // --- Car ---
+      this.createCar();
+      this.applyCarColor(App.user.carColor || '#ff3b3b');
+      this.scene.add(this.car);
+
+      // --- Camera ---
+      this.camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 2000);
+      this.camera.position.set(0, 6, 12);
+
+      this.setupControls();
+      window.addEventListener('resize', () => this.onResize());
+    },
+
+    createCar() {
+        const carGroup = new THREE.Group();
+        const chassisMat = new THREE.MeshStandardMaterial({ color: 0xff3b3b, metalness: 0.6, roughness: 0.3 });
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.2, 2.2), chassisMat);
+        chassis.position.y = 0.9; chassis.castShadow = true; chassis.userData.paint = true; carGroup.add(chassis);
+        
+        const glassMat = new THREE.MeshStandardMaterial({color: 0x223, metalness: 0.2, roughness: 0.1, transparent: true, opacity: 0.4});
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.9, 1.8), glassMat);
+        cabin.position.set(0, 1.6, 0); carGroup.add(cabin);
+
+        const darkMat = new THREE.MeshStandardMaterial({color: 0x222, metalness: 0.2});
+        const headL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.08), new THREE.MeshStandardMaterial({color: 0xffffee,emissive: 0xffffee,emissiveIntensity: 1.5}));
+        headL.position.set(-1.1, 1.0, 1.15); carGroup.add(headL);
+        const headR = headL.clone(); headR.position.x = 1.1; carGroup.add(headR);
+        
+        function makeWheel(){ const w = new THREE.Group(); const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.4,24), new THREE.MeshStandardMaterial({color:0x111})); tire.rotation.z = Math.PI/2; tire.castShadow=true; w.add(tire); const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.28,0.42, 8), new THREE.MeshStandardMaterial({color:0xcccccc, metalness:0.8, roughness: 0.2})); rim.rotation.z = Math.PI/2; w.add(rim); return w; }
+        this.wfl = makeWheel(); this.wfl.position.set(-1.6, 0.45, 1.0); carGroup.add(this.wfl);
+        this.wfr = makeWheel(); this.wfr.position.set(1.6, 0.45, 1.0); carGroup.add(this.wfr);
+        this.wbl = makeWheel(); this.wbl.position.set(-1.6, 0.45, -1.0); carGroup.add(this.wbl);
+        this.wbr = makeWheel(); this.wbr.position.set(1.6, 0.45, -1.0); carGroup.add(this.wbr);
+
+        const spoiler = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.12,0.32), darkMat);
+        spoiler.position.set(0,1.4,-1.15); spoiler.rotation.x = -0.1; spoiler.castShadow = true; carGroup.add(spoiler);
+        
+        this.car = carGroup;
+    },
+
+    applyCarColor(color) {
+      if (this.car) {
+        this.car.traverse(m => {
+          if (m.isMesh && m.userData.paint) {
+            m.material.color.set(color);
+          }
+        });
+      }
+    },
+
+    setupControls() {
+        const handler = (e, isDown) => {
+            if(e.repeat) return;
+            const value = isDown ? 1 : 0;
+            switch(e.code){
+                case 'KeyW': this.inputState.acc = isDown ? 1 : (this.inputState.acc < 0 ? this.inputState.acc : 0); break;
+                case 'KeyS': this.inputState.acc = isDown ? -1 : (this.inputState.acc > 0 ? this.inputState.acc : 0); break;
+                case 'KeyA': this.inputState.steer = isDown ? 1 : (this.inputState.steer < 0 ? this.inputState.steer : 0); break;
+                case 'KeyD': this.inputState.steer = isDown ? -1 : (this.inputState.steer > 0 ? this.inputState.steer : 0); break;
+                case 'Space': this.inputState.handbrake = isDown; break;
+                case 'ShiftLeft': this.inputState.nitro = isDown; break;
+            }
+        };
+        window.addEventListener('keydown', e => handler(e, true));
+        window.addEventListener('keyup', e => handler(e, false));
+    },
+
+    physicsStep(dt) {
+      const CONFIG = { maxSteer: Math.PI / 4, maxSpeed: 70, accel: 40, brakeDecel: 80, handbrakeFriction: 0.2, grip: 0.95, nitroImpulse: 18 };
+      let { pos, vel, angle, angularVel } = this.physicsState;
+      let { acc, steer, handbrake, nitro } = this.inputState;
+
+      const toLocal = (v, a) => { const c=Math.cos(-a), s=Math.sin(-a); return { x: v.x*c - v.z*s, z: v.x*s + v.z*c }; };
+      const toWorld = (l, a) => { const c=Math.cos(a), s=Math.sin(a); return { x: l.x*c - l.z*s, z: l.x*s + l.z*c }; };
+      
+      const localVel = toLocal(vel, angle);
+      let vF = localVel.x, vLat = localVel.z;
+
+      let traction = acc > 0 ? acc * CONFIG.accel : acc * CONFIG.brakeDecel;
+      if (nitro && Math.abs(vF) < CONFIG.maxSpeed) vF += CONFIG.nitroImpulse * dt;
+      
+      const drag = 0.5 * vF * Math.abs(vF) * 0.015;
+      vF += (traction - drag) * dt;
+      vF = Math.max(-CONFIG.maxSpeed * 0.5, Math.min(CONFIG.maxSpeed, vF));
+
+      let currentGrip = handbrake ? CONFIG.grip * CONFIG.handbrakeFriction : CONFIG.grip;
+      vLat *= (1 - currentGrip * dt * 4.5);
+
+      const steerAng = steer * CONFIG.maxSteer * (1 - Math.min(Math.abs(vF) / CONFIG.maxSpeed, 0.8));
+      const turningRadius = 2.8 / Math.tan(steerAng || 1e-6);
+      const desiredAngularVel = vF / (turningRadius || 1e6);
+      angularVel += (desiredAngularVel - angularVel) * 0.3;
+      angle += angularVel * dt;
+      
+      const worldVel = toWorld({ x: vF, z: vLat }, angle);
+      vel.x = worldVel.x; vel.z = worldVel.z;
+      
+      pos.x += vel.x * dt; pos.z += vel.z * dt;
+
+      vel.multiplyScalar(0.998);
+      angularVel *= 0.995;
+    },
+
+    runLoop() {
+        let lastTime = performance.now();
+        const loop = (now) => {
+            if (!this.started) return;
+            this.animationFrameId = requestAnimationFrame(loop);
+            
+            const dt = Math.min(0.05, (now - lastTime) / 1000);
+            lastTime = now;
+            
+            this.physicsStep(dt);
+            this.updateVisuals();
+
+            this.renderer.render(this.scene, this.camera);
+        };
+        loop(performance.now());
+    },
+
+    updateVisuals() {
+        this.car.position.copy(this.physicsState.pos);
+        this.car.rotation.y = -this.physicsState.angle;
+        
+        const speed = this.physicsState.vel.length();
+        [this.wfl, this.wfr, this.wbl, this.wbr].forEach(w => { w.rotation.x -= speed * 0.15; });
+        
+        const steerInfluence = this.inputState.steer * 0.4;
+        this.wfl.rotation.y = this.wfr.rotation.y = steerInfluence;
+
+        const behind = new THREE.Vector3(0, 4.2, 9).applyAxisAngle(new THREE.Vector3(0,1,0), -this.physicsState.angle);
+        this.camera.position.lerp(this.physicsState.pos.clone().add(behind), 0.12);
+        this.camera.lookAt(this.car.position.clone().add(new THREE.Vector3(0, 1.2, 0)));
+        
+        // --- HUD & Scoring ---
+        document.getElementById('hudSpeed').innerText = Math.round(speed * 3.6);
+        
+        // *** CORREÇÃO: Lógica de cálculo de drift mais segura ***
+        let driftAngle = 0;
+        const forwardDir = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), -this.physicsState.angle);
+        const velocityDir = this.physicsState.vel.clone().setY(0);
+
+        // Apenas calcula o ângulo se o carro estiver se movendo para evitar o bug de NaN
+        if (velocityDir.lengthSq() > 0.1) { 
+            velocityDir.normalize();
+            driftAngle = forwardDir.angleTo(velocityDir);
+        }
+
+        const isDrifting = speed > 10 && driftAngle > 0.4;
+        
+        if (isDrifting) {
+            this.driftScore += Math.round(speed * driftAngle * 2);
+        } else if (this.driftScore > 0) {
+            if (this.driftScore > App.user.highScore) {
+                App.user.highScore = this.driftScore;
+                App.saveUserData();
+                document.getElementById('highScore').innerText = App.user.highScore;
+            }
+            this.driftScore = 0; // Reset score after drift ends
+        }
+        document.getElementById('hudDrift').innerText = this.driftScore;
+    },
+
+    onResize() {
+        const canvas = this.renderer.domElement;
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        this.renderer.setSize(w, h);
+        this.camera.aspect = w / h;
+        this.camera.updateProjectionMatrix();
+    }
+  };
+
+  // Initialize the application once the DOM is ready
+  window.addEventListener('load', () => App.init());
+
+  </script>
+</body>
+</html>
